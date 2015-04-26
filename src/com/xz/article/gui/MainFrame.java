@@ -23,11 +23,12 @@ public class MainFrame extends JFrame {
 
     private JTextField articleTitleField;
     private JTextArea articleContent;
+    private JTextField articleType;
     private JComboBox articleRate;
 
     private JTextField commentTitleField;
     private JTextArea commentContent;
-    private JComboBox commentRate;
+    private JTextField commentAuthor;
 
     private JTextArea artistOperationEcho;
 
@@ -92,7 +93,7 @@ public class MainFrame extends JFrame {
         checkArtist.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (!((JButton)e.getSource()).isEnabled()){
+                if (!((JButton) e.getSource()).isEnabled()) {
                     return;
                 }
 
@@ -102,7 +103,7 @@ public class MainFrame extends JFrame {
                         checkArtist.setEnabled(false);
 
                         String name = artistNameField.getText().trim();
-                        if (name.length() == 0){
+                        if (name.length() == 0) {
                             artistOperationEcho.setText("Artist Name is required!");
                             checkArtist.setEnabled(true);
                             return;
@@ -118,11 +119,13 @@ public class MainFrame extends JFrame {
 
                         artistOperationEcho.setText("Checking...");
 
-                        if (dbOperator.findPoet(name, dynasty) != -1) {
-                            artistOperationEcho.setText(String.format("%s already exists", nameDynasty));
-                        }
-                        else {
+                        int artistid = dbOperator.findArtist(name, dynasty);
+                        if (artistid == ArticleDBOperate.NOT_FOUND) {
                             artistOperationEcho.setText(String.format("%s doesn't exist", nameDynasty));
+                        } else if(artistid == ArticleDBOperate.TOO_MANY_MATCH) {
+                            artistOperationEcho.setText(String.format("%s has too many matches, please be more specific", nameDynasty));
+                        } else {
+                            artistOperationEcho.setText(String.format("%s already exists", nameDynasty));
                         }
 
                         checkArtist.setEnabled(true);
@@ -168,8 +171,8 @@ public class MainFrame extends JFrame {
 
                         artistOperationEcho.setText("Inserting...");
 
-                        String res[] = dbOperator.insertPoet(name, dynasty);
-                        if (res[0].endsWith("-1")){
+                        String res[] = dbOperator.insertArtist(name, dynasty);
+                        if (res[0].equals("-1")){
                             artistOperationEcho.setText("Insertion failed for "+nameDynasty + ", Error info: "+res[1]);
                         }else{
                             artistOperationEcho.setText("Insertion succeeded for "+nameDynasty + ", Artist id is " + res[0]);
@@ -235,28 +238,162 @@ public class MainFrame extends JFrame {
         constraint.gridheight = 1;
         this.add(titleRateLabel, constraint);
 
-        JComboBox articleRate = new JComboBox();
+        articleRate = new JComboBox();
         articleRate.addItem("1 (very bad)");
         articleRate.addItem("2 (bad)");
         articleRate.addItem("3 (normal)");
         articleRate.addItem("4 (good)");
         articleRate.addItem("5 (very good)");
+        articleRate.setSelectedIndex(2);
 
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 1;
         constraint.gridy = 7;
         this.add(articleRate, constraint);
 
-        JButton checkArticle = new JButton("Check Article");
+        JLabel articleTypeLabel = new JLabel("Article Category");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 2;
         constraint.gridy = 7;
-        this.add(checkArticle, constraint);
+        constraint.gridwidth = 1;
+        constraint.gridheight = 1;
+        this.add(articleTypeLabel, constraint);
 
-        JButton insertArticle = new JButton("Add Article");
+        articleType = new JTextField(10);
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 3;
         constraint.gridy = 7;
+        this.add(articleType, constraint);
+
+        final JButton checkArticle = new JButton("Check Article");
+
+        checkArticle.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!((JButton)e.getSource()).isEnabled()){
+                    return;
+                }
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        checkArticle.setEnabled(false);
+
+                        artistOperationEcho.setText("Checking...");
+
+                        String name = artistNameField.getText().trim();
+                        if (name.length() == 0){
+                            artistOperationEcho.setText("Artist name is required!");
+                            checkArticle.setEnabled(true);
+                            return;
+                        }
+
+                        String title = articleTitleField.getText().trim();
+                        if (title.length() == 0){
+                            artistOperationEcho.setText("Article Title is required!");
+                            checkArticle.setEnabled(true);
+                            return;
+                        }
+
+                        String nameDynasty = name;
+                        String dynasty = dynastyField.getText().trim();
+                        if (dynasty.length() == 0)
+                            dynasty = "%";
+                        else
+                            nameDynasty = String.format("%s(%s)", name, dynasty);
+
+                        String content = articleContent.getText().trim();
+                        String titleContent = title;
+                        if (content.length() == 0)
+                            content = "%";
+                        else
+                            titleContent = String.format("%s(%s)", title, content);
+
+                        long articleid = dbOperator.findArticle(name, dynasty, title, content);
+                        if (articleid == ArticleDBOperate.NOT_FOUND){
+                            artistOperationEcho.setText(String.format("%s -- %s doesn't exist!", nameDynasty, titleContent));
+                        }else if (articleid == ArticleDBOperate.TOO_MANY_MATCH){
+                            artistOperationEcho.setText(String.format("%s -- %s has too many matches, please be more specific!", nameDynasty, titleContent));
+                        }else{
+                            articleContent.setText(dbOperator.getArticleContent(articleid));
+                            artistOperationEcho.setText(String.format("%s -- %s already exists!", nameDynasty, titleContent));
+                        }
+
+                        checkArticle.setEnabled(true);
+                    }
+                }).start();
+            }
+        });
+
+        constraint.fill = GridBagConstraints.HORIZONTAL;
+        constraint.gridx = 2;
+        constraint.gridy = 8;
+        this.add(checkArticle, constraint);
+
+        final JButton insertArticle = new JButton("Add Article");
+
+        insertArticle.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!((JButton)e.getSource()).isEnabled()){
+                    return;
+                }
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        insertArticle.setEnabled(false);
+
+                        artistOperationEcho.setText("Working...");
+
+                        String name = artistNameField.getText().trim();
+                        if (name.length() == 0){
+                            artistOperationEcho.setText("Artist name is required!");
+                            insertArticle.setEnabled(true);
+                            return;
+                        }
+
+                        String title = articleTitleField.getText().trim();
+                        if (title.length() == 0){
+                            artistOperationEcho.setText("Article Title is required!");
+                            insertArticle.setEnabled(true);
+                            return;
+                        }
+
+                        String content = articleContent.getText().trim();
+                        if (content.replaceAll("\r\n", "").length() == 0){
+                            artistOperationEcho.setText("Article Content is required!");
+                            insertArticle.setEnabled(true);
+                            return;
+                        }
+
+                        String nameDynasty = name;
+                        String dynasty = dynastyField.getText().trim();
+                        if (dynasty.length() == 0)
+                            dynasty = "%";
+                        else
+                            nameDynasty = String.format("%s(%s)", name, dynasty);
+
+                        String titleContent = String.format("%s(%s)", title, content);
+
+                        String res[] = dbOperator.insertArticle(name, dynasty, title, content, articleRate.getSelectedIndex()+1, articleType.getText().trim());
+                        if (res[0] == "-1"){
+                            artistOperationEcho.setText("Failed to add article, reason is "+res[1]);
+                        }else{
+                            artistOperationEcho.setText("Succeeded to add article, its id is "+res[0] + ", operation info: "+res[1]);
+                        }
+
+                        insertArticle.setEnabled(true);
+                    }
+                }).start();
+            }
+        });
+
+        constraint.fill = GridBagConstraints.HORIZONTAL;
+        constraint.gridx = 3;
+        constraint.gridy = 8;
         this.add(insertArticle, constraint);
 
 
@@ -264,28 +401,28 @@ public class MainFrame extends JFrame {
         JLabel separator2 = new JLabel("------ Comment Area ------");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 0;
-        constraint.gridy = 8;
+        constraint.gridy = 9;
         constraint.gridwidth = 2;
         this.add(separator2, constraint);
 
         JLabel commentTitleLabel = new JLabel("Comment Title");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 0;
-        constraint.gridy = 9;
+        constraint.gridy = 10;
         constraint.gridwidth = 1;
         this.add(commentTitleLabel, constraint);
 
         commentTitleField = new JTextField();
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 1;
-        constraint.gridy = 9;
+        constraint.gridy = 10;
         constraint.gridwidth = 3;
         this.add(commentTitleField, constraint);
 
         JLabel commentContentLabel = new JLabel("Comment Content");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 0;
-        constraint.gridy = 10;
+        constraint.gridy = 11;
         constraint.gridwidth = 2;
         this.add(commentContentLabel, constraint);
 
@@ -294,48 +431,42 @@ public class MainFrame extends JFrame {
         commentContent.setWrapStyleWord(true);
         constraint.fill = GridBagConstraints.BOTH;
         constraint.gridx = 0;
-        constraint.gridy = 11;
+        constraint.gridy = 12;
         constraint.gridwidth = 4;
         constraint.gridheight = 1;
         this.add(new JScrollPane(commentContent), constraint);
 
-        JLabel commentRateLabel = new JLabel("Comment Rate");
+        JLabel commentAuthorLabel = new JLabel("Comment Author");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 0;
-        constraint.gridy = 12;
+        constraint.gridy = 13;
         constraint.gridwidth = 1;
         constraint.gridheight = 1;
-        this.add(commentRateLabel, constraint);
+        this.add(commentAuthorLabel, constraint);
 
-        JComboBox commentRate = new JComboBox();
-        commentRate.addItem("1 (very bad)");
-        commentRate.addItem("2 (bad)");
-        commentRate.addItem("3 (normal)");
-        commentRate.addItem("4 (good)");
-        commentRate.addItem("5 (very good)");
-
+        commentAuthor = new JTextField();
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 1;
-        constraint.gridy = 12;
-        this.add(commentRate, constraint);
+        constraint.gridy = 13;
+        this.add(commentAuthor, constraint);
 
         JButton checkComment = new JButton("Check Comment");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 2;
-        constraint.gridy = 12;
+        constraint.gridy = 13;
         this.add(checkComment, constraint);
 
         JButton insertComment = new JButton("Add Comment");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 3;
-        constraint.gridy = 12;
+        constraint.gridy = 13;
         this.add(insertComment, constraint);
 
         //operation info
         JLabel separator3 = new JLabel("------ Operation Info ------");
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 0;
-        constraint.gridy = 13;
+        constraint.gridy = 14;
         constraint.gridwidth = 2;
         this.add(separator3, constraint);
 
@@ -347,7 +478,7 @@ public class MainFrame extends JFrame {
         artistOperationEcho.setWrapStyleWord(true);
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 0;
-        constraint.gridy = 14;
+        constraint.gridy = 15;
         constraint.gridwidth = 4;
         this.add(new JScrollPane(artistOperationEcho), constraint);
 
@@ -367,7 +498,7 @@ public class MainFrame extends JFrame {
 
         String[] res = dbOperator.getConnection(host,port,db,username,password);
 
-        if (res[0].endsWith(ArticleDBOperate.CONN_SUCC)) {
+        if (res[0].equals(ArticleDBOperate.CONN_SUCC)) {
             this.setVisible(true);
 
             Properties prop = new Properties();
