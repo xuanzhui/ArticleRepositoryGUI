@@ -10,6 +10,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.sql.Date;
 import java.util.Properties;
 
 /**
@@ -23,6 +25,7 @@ public class MainFrame extends JFrame {
 
     private JTextField articleTitleField;
     private JTextArea articleContent;
+    private JTextField publishDateField;
     private JTextField articleType;
     private JComboBox articleRate;
 
@@ -32,9 +35,7 @@ public class MainFrame extends JFrame {
 
     private JTextArea artistOperationEcho;
 
-    public static void main(String[] args) {
-        new ConnectionDialFrame(new MainFrame(new PostgreSQLImpl()));
-    }
+    private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     public MainFrame(final ArticleDBOperate dbOperator){
         //this.setSize(400, 600);
@@ -265,6 +266,18 @@ public class MainFrame extends JFrame {
         constraint.gridy = 7;
         this.add(articleType, constraint);
 
+        JLabel publishDateLabel = new JLabel("Publish Date");
+        constraint.fill = GridBagConstraints.HORIZONTAL;
+        constraint.gridx = 0;
+        constraint.gridy = 8;
+        this.add(publishDateLabel, constraint);
+
+        publishDateField = new JTextField();
+        constraint.fill = GridBagConstraints.HORIZONTAL;
+        constraint.gridx = 1;
+        constraint.gridy = 8;
+        this.add(publishDateField, constraint);
+
         final JButton checkArticle = new JButton("Check Article");
 
         checkArticle.addMouseListener(new MouseAdapter() {
@@ -378,7 +391,19 @@ public class MainFrame extends JFrame {
 
                         String titleContent = String.format("%s(%s)", title, content);
 
-                        String res[] = dbOperator.insertArticle(name, dynasty, title, content, articleRate.getSelectedIndex()+1, articleType.getText().trim());
+                        Date publishDate = null;
+
+                        if (publishDateField.getText().trim().length() != 0) {
+                            try {
+                                Date.valueOf(publishDateField.getText().trim());
+                            } catch (java.lang.IllegalArgumentException exc) {
+                                artistOperationEcho.setText(exc.getMessage() + ", date format should be yyyy-MM-dd");
+                                insertArticle.setEnabled(true);
+                                return;
+                            }
+                        }
+
+                        String res[] = dbOperator.insertArticle(name, dynasty, title, content, articleRate.getSelectedIndex()+1, articleType.getText().trim(), publishDate);
                         if (res[0] == "-1"){
                             artistOperationEcho.setText("Failed to add article, reason is "+res[1]);
                         }else{
@@ -582,8 +607,20 @@ public class MainFrame extends JFrame {
                             return;
                         }
 
+                        Date publishDate = null;
+
+                        if (publishDateField.getText().trim().length() != 0) {
+                            try {
+                                Date.valueOf(publishDateField.getText().trim());
+                            } catch (java.lang.IllegalArgumentException exc) {
+                                artistOperationEcho.setText(exc.getMessage() + ", date format should be yyyy-MM-dd");
+                                insertComment.setEnabled(true);
+                                return;
+                            }
+                        }
+
                         String res[] = dbOperator.insertComment(name, dynasty, title, content,
-                                articleRate.getSelectedIndex() + 1, articleType.getText().trim(), commentTitle, commentCont, critic);
+                                articleRate.getSelectedIndex() + 1, articleType.getText().trim(), publishDate, commentTitle, commentCont, critic);
                         if (res[0] == "-1"){
                             artistOperationEcho.setText("Failed to add comment, reason is "+res[1]);
                         }else{

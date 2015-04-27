@@ -1,5 +1,7 @@
 package com.xz.article.db;
 
+import java.sql.Date;
+
 /**
  * Created by xuanzhui on 15/4/14.
  */
@@ -17,9 +19,9 @@ public interface ArticleDBOperate {
     //contains the inserted id and possible failure info
     String[] insertArtist(String artistName, String dynasty);
     long findArticle(String artistName, String dynasty, String title, String content);
-    String[] insertArticle(String artistName, String dynasty, String title, String content, int rate, String type);
+    String[] insertArticle(String artistName, String dynasty, String title, String content, int rate, String type, Date publishDate);
     String getArticleContent(long articleid);
     String[] findComment(String artistName, String dynasty, String articleTitle, String articleContent, String commentTitle, String commentContent, String commentAuthor);
     String getCommentContent(long commentid);
-    String[] insertComment(String artistName, String dynasty, String articleTitle, String articleContent, int articleRate, String articleType, String commentTitle, String commentContent, String commentAuthor);
+    String[] insertComment(String artistName, String dynasty, String articleTitle, String articleContent, int articleRate, String articleType, Date articlePublishDate, String commentTitle, String commentContent, String commentAuthor);
 }

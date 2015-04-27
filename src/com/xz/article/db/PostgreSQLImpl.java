@@ -160,7 +160,7 @@ public class PostgreSQLImpl implements ArticleDBOperate{
     }
 
     @Override
-    public String[] insertArticle(String artistName, String dynasty, String title, String content,int rate, String type) {
+    public String[] insertArticle(String artistName, String dynasty, String title, String content,int rate, String type, Date publishDate) {
         String[] res = new String[2];
         res[0] = "-1";
         res[1] = "";
@@ -192,7 +192,7 @@ public class PostgreSQLImpl implements ArticleDBOperate{
             return res;
         }
 
-        long articleid= this.insertArticle(artistid, title, content, type, rate);
+        long articleid= this.insertArticle(artistid, title, content, type, rate, publishDate);
 
         if (articleid == -1)
             res[1] += "Cannot get the artist id!";
@@ -202,16 +202,17 @@ public class PostgreSQLImpl implements ArticleDBOperate{
         return res;
     }
 
-    private long insertArticle(int artistid, String title, String content, String type, int rate){
+    private long insertArticle(int artistid, String title, String content, String type, int rate, Date publishDate){
         long res = -1;
 
         try {
-            PreparedStatement pst = connection.prepareStatement("insert into articles(artist_id, title, content, article_type, rate) values(?,?,?,?,?)", PreparedStatement.RETURN_GENERATED_KEYS);
+            PreparedStatement pst = connection.prepareStatement("insert into articles(artist_id, title, content, article_type, rate, publish_date) values(?,?,?,?,?,?)", PreparedStatement.RETURN_GENERATED_KEYS);
             pst.setInt(1, artistid);
             pst.setString(2, title);
             pst.setString(3, content);
             pst.setString(4, type);
             pst.setInt(5, rate);
+            pst.setDate(6, publishDate);
             pst.executeUpdate();
 
             ResultSet rs = pst.getGeneratedKeys();
@@ -331,7 +332,8 @@ public class PostgreSQLImpl implements ArticleDBOperate{
     }
 
     @Override
-    public String[] insertComment(String artistName, String dynasty, String articleTitle, String articleContent, int articleRate, String articleType, String commentTitle, String commentContent, String commentAuthor) {
+    public String[] insertComment(String artistName, String dynasty, String articleTitle, String articleContent,
+                                  int articleRate, String articleType, Date articlePublishDate, String commentTitle, String commentContent, String commentAuthor) {
         String[] res = new String[2];
         res[0] = "-1";
         res[1] = "";
@@ -348,7 +350,7 @@ public class PostgreSQLImpl implements ArticleDBOperate{
                 return res;
             } else {
                 artistid = Integer.valueOf(artistres[0]);
-                res[1] += ("add new artist successfully, its id is " + res[0]);
+                res[1] += ("add new artist successfully, its id is " + artistres[0] + ".");
             }
         }
 
@@ -357,13 +359,13 @@ public class PostgreSQLImpl implements ArticleDBOperate{
             res[1] += " too many matches for article! skipping left operation...";
             return res;
         } else if (articleid == ArticleDBOperate.NOT_FOUND) {
-            long articleres = this.insertArticle(artistid,articleTitle,articleContent,articleType,articleRate);
+            long articleres = this.insertArticle(artistid,articleTitle,articleContent,articleType,articleRate, articlePublishDate);
             if (articleres == -1) {
                 res[1] += " cannot get article insertion status, skipping left operation...";
                 return res;
             } else {
                 articleid = articleres;
-                res[1] += " add new article successfully, its id is " + articleres;
+                res[1] += " add new article successfully, its id is " + articleres + ".";
             }
         }
 
@@ -378,7 +380,7 @@ public class PostgreSQLImpl implements ArticleDBOperate{
                 return res;
             }else {
                 criticid = Integer.valueOf(criticres[0]);
-                res[1] += (" add new comment author successfully, its id is " + criticres[0]);
+                res[1] += (" add new comment author successfully, its id is " + criticres[0] + ".");
             }
         }
 
@@ -404,8 +406,16 @@ public class PostgreSQLImpl implements ArticleDBOperate{
             res[1] += (" new comment added, its id is "+res[0]);
             rs.close();
             pst.close();
+
         } catch (SQLException e) {
             res[0] = "-1";
+            res[1] += " "+e.getMessage();
+            e.printStackTrace();
+        }
+
+        try {
+            this.updateArticleCommentFlag(articleid);
+        } catch (SQLException e) {
             res[1] += " "+e.getMessage();
             e.printStackTrace();
         }
@@ -413,4 +423,10 @@ public class PostgreSQLImpl implements ArticleDBOperate{
         return res;
     }
 
+    private void updateArticleCommentFlag(long articleid) throws SQLException {
+        PreparedStatement pst = connection.prepareStatement("update articles set has_comment_flag = 'Y' where id = ?");
+        pst.setLong(1, articleid);
+        pst.executeUpdate();
+        pst.close();
+    }
 }
