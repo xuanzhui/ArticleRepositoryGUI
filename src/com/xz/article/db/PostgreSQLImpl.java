@@ -270,6 +270,21 @@ public class PostgreSQLImpl implements ArticleDBOperate{
             return res;
         }
 
+        long commentid = this.findComment(articleid, criticid, commentTitle, commentContent);
+
+        if (commentid == ArticleDBOperate.NOT_FOUND)
+            res[1] += "comment not found";
+        else if (commentid == ArticleDBOperate.TOO_MANY_MATCH)
+            res[1] += "too many matched for the comment criteria, please be more specific!";
+        else
+            res[0] = String.valueOf(commentid);
+
+        return res;
+    }
+
+    private long findComment(long articleid, int criticid, String commentTitle, String commentContent) {
+        long res = ArticleDBOperate.NOT_FOUND;
+
         try {
             PreparedStatement pst = connection.prepareStatement("select id from comments where article_id = ? and critic_id = ? and title like ? and content like ?");
             pst.setLong(1, articleid);
@@ -280,17 +295,14 @@ public class PostgreSQLImpl implements ArticleDBOperate{
             ResultSet rs = pst.executeQuery();
 
             if (rs.next()){
-                res[0] = String.valueOf(rs.getLong(1));
+                res = rs.getLong(1);
 
                 if (rs.next()){
-                    res[0] = "-1";
-                    res[1] += "too many matched for the comment criteria, please be more specific!";
+                    res = ArticleDBOperate.TOO_MANY_MATCH;
                 }
             }
 
         } catch (SQLException e) {
-            res[0] = "-1";
-            res[1] += " "+e.getMessage();
             e.printStackTrace();
         }
 
@@ -324,7 +336,7 @@ public class PostgreSQLImpl implements ArticleDBOperate{
         res[0] = "-1";
         res[1] = "";
 
-        int artistid = this.findArtist(artistName, dynasty);
+        int artistid = this.findArtist(artistName, dynasty.length() == 0 ? "%" : dynasty);
 
         if (artistid == ArticleDBOperate.TOO_MANY_MATCH){
             res[1] += "too many matches for artist! skipping operation...";
@@ -370,6 +382,11 @@ public class PostgreSQLImpl implements ArticleDBOperate{
             }
         }
 
+        if (this.findComment(articleid, criticid, commentTitle, commentContent) != ArticleDBOperate.NOT_FOUND){
+            res[1] += " comment already exists, skipping left operation...";
+            return res;
+        }
+
         try {
             PreparedStatement pst = connection.prepareStatement("insert into comments(article_id, critic_id, title, content) values(?,?,?,?)", PreparedStatement.RETURN_GENERATED_KEYS);
             pst.setLong(1, articleid);
@@ -384,6 +401,7 @@ public class PostgreSQLImpl implements ArticleDBOperate{
             if (rs.next())
                 res[0] = String.valueOf(rs.getLong(1));
 
+            res[1] += (" new comment added, its id is "+res[0]);
             rs.close();
             pst.close();
         } catch (SQLException e) {

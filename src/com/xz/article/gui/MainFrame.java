@@ -450,13 +450,151 @@ public class MainFrame extends JFrame {
         constraint.gridy = 13;
         this.add(commentAuthor, constraint);
 
-        JButton checkComment = new JButton("Check Comment");
+        final JButton checkComment = new JButton("Check Comment");
+        checkComment.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!((JButton)e.getSource()).isEnabled()){
+                    return;
+                }
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        checkComment.setEnabled(false);
+
+                        artistOperationEcho.setText("Checking...");
+
+                        String name = artistNameField.getText().trim();
+                        if (name.length() == 0){
+                            artistOperationEcho.setText("Artist name is required!");
+                            checkComment.setEnabled(true);
+                            return;
+                        }
+
+                        String title = articleTitleField.getText().trim();
+                        if (title.length() == 0){
+                            artistOperationEcho.setText("Article Title is required!");
+                            checkComment.setEnabled(true);
+                            return;
+                        }
+
+                        String content = articleContent.getText().trim();
+                        if (content.replaceAll("\r\n", "").length() == 0){
+                            artistOperationEcho.setText("Article Content is required!");
+                            checkComment.setEnabled(true);
+                            return;
+                        }
+
+                        String dynasty = dynastyField.getText().trim();
+                        if (dynasty.length() == 0)
+                            dynasty = "%";
+
+                        String commentTitle = commentTitleField.getText().trim();
+                        if (commentTitle.length() == 0)
+                            commentTitle="%";
+
+                        String commentCont = commentContent.getText().trim();
+                        if (commentCont.length() == 0){
+                            artistOperationEcho.setText("Comment Content is required!");
+                            checkComment.setEnabled(true);
+                            return;
+                        }
+
+                        String critic = commentAuthor.getText().trim();
+                        if (critic.length() == 0){
+                            artistOperationEcho.setText("Comment author is required!");
+                            checkComment.setEnabled(true);
+                            return;
+                        }
+
+                        String res[] = dbOperator.findComment(name, dynasty, title, content, commentTitle, commentCont, critic);
+                        if (res[0] == "-1"){
+                            artistOperationEcho.setText("Failed to find comment, reason is "+res[1]);
+                        }else{
+                            commentContent.setText(dbOperator.getCommentContent(Long.valueOf(res[0])));
+                            artistOperationEcho.setText("Succeeded to find comment, its id is "+res[0]);
+                        }
+
+                        checkComment.setEnabled(true);
+                    }
+                }).start();
+            }
+        });
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 2;
         constraint.gridy = 13;
         this.add(checkComment, constraint);
 
-        JButton insertComment = new JButton("Add Comment");
+        final JButton insertComment = new JButton("Add Comment");
+        insertComment.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!((JButton)e.getSource()).isEnabled()){
+                    return;
+                }
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        insertComment.setEnabled(false);
+
+                        artistOperationEcho.setText("Checking...");
+
+                        String name = artistNameField.getText().trim();
+                        if (name.length() == 0){
+                            artistOperationEcho.setText("Artist name is required!");
+                            insertComment.setEnabled(true);
+                            return;
+                        }
+
+                        String title = articleTitleField.getText().trim();
+                        if (title.length() == 0){
+                            artistOperationEcho.setText("Article Title is required!");
+                            insertComment.setEnabled(true);
+                            return;
+                        }
+
+                        String content = articleContent.getText().trim();
+                        if (content.replaceAll("\r\n", "").length() == 0){
+                            artistOperationEcho.setText("Article Content is required!");
+                            insertComment.setEnabled(true);
+                            return;
+                        }
+
+                        String dynasty = dynastyField.getText().trim();
+
+                        String commentTitle = commentTitleField.getText().trim();
+
+                        String commentCont = commentContent.getText().trim();
+                        if (commentCont.length() == 0){
+                            artistOperationEcho.setText("Comment Content is required!");
+                            insertComment.setEnabled(true);
+                            return;
+                        }
+
+                        String critic = commentAuthor.getText().trim();
+                        if (critic.length() == 0){
+                            artistOperationEcho.setText("Comment author is required!");
+                            insertComment.setEnabled(true);
+                            return;
+                        }
+
+                        String res[] = dbOperator.insertComment(name, dynasty, title, content,
+                                articleRate.getSelectedIndex() + 1, articleType.getText().trim(), commentTitle, commentCont, critic);
+                        if (res[0] == "-1"){
+                            artistOperationEcho.setText("Failed to add comment, reason is "+res[1]);
+                        }else{
+                            artistOperationEcho.setText("Succeeded to add comment, its id is "+res[0] + ", operation info: "+res[1]);
+                        }
+
+                        insertComment.setEnabled(true);
+                    }
+                }).start();
+            }
+        });
         constraint.fill = GridBagConstraints.HORIZONTAL;
         constraint.gridx = 3;
         constraint.gridy = 13;
